@@ -11,7 +11,7 @@ Convierte imágenes en arte ASCII directamente desde tu navegador.
 
 ## 🌐 Demo
 
-👉 https://TUUSUARIO.github.io/ascii-art-app/
+👉 https://650895-ctrl.github.io/ascii-art-app/
 
 ## 🛠️ Tecnologías
 
