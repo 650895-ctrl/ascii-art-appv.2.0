@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ASCII APP PRO MAX</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: monospace;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: white;
+}
+
+.app {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+.panel {
+  background: #111;
+  padding: 15px;
+  border-radius: 15px;
+  margin-bottom: 15px;
+}
+
+input, select, button {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border-radius: 8px;
+  border: none;
+}
+
+button {
+  background: #00ff88;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #00cc6a;
+}
+
+.preview img, video {
+  max-width: 100%;
+  border-radius: 10px;
+}
+
+#resultado {
+  background: black;
+  padding: 10px;
+  border-radius: 10px;
+  overflow: auto;
+  white-space: pre;
+  font-size: 6px;
+  line-height: 6px;
+}
+</style>
+</head>
+
+<body>
+<div style="text-align:center; margin-top:30px;">
+  <p>💖 ¿Te gustó la herramienta?</p>
+  <button style="background:#ff4081; color:white; padding:10px 20px; border:none; border-radius:10px;"
+          onclick="window.open('https://paypal.me/jesuscastillo513?locale.x=es_XC&country.x=MX')">
+    Apóyame
+  </button>
+</div>
+<div class="app">
+
+<h1>🎨 ASCII ART PRO MAX</h1>
+
+<div class="panel">
+<input type="file" id="imagenInput" accept="image/*">
+
+<!-- 🔥 RECOMENDACIONES -->
+<div class="panel" style="background:#222; font-size:14px;">
+  <h3>⚠️ Recomendaciones</h3>
+  <ul style="text-align:left;">
+    <li>📷 Usa imágenes pequeñas o medianas</li>
+    <li>📏 Resolución recomendada: 300px - 1000px</li>
+    <li>🖼️ Formatos: JPG o PNG</li>
+    <li>🚫 Evita imágenes muy pesadas (más de 5MB)</li>
+    <li>⚡ Si se traba, baja la calidad</li>
+  </ul>
+</div>
+
+<label>Calidad: <span id="valorCalidad">100</span></label>
+<input type="range" id="calidad" min="50" max="200" value="100">
+
+<label>Brillo</label>
+<input type="range" id="brillo" min="0.5" max="2" step="0.1" value="1">
+
+<label>Zoom</label>
+<input type="range" id="zoom" min="4" max="10" value="6">
+
+<label>Modo de color:</label>
+<select id="modoColor">
+<option value="color">🌈 Color</option>
+<option value="bn">⚫ Blanco y negro</option>
+</select>
+
+<label>Estilo:</label>
+<select id="estilo">
+<option value="@#S%?*+;:,.">Clásico</option>
+<option value="@%#*+=-:. ">Detallado</option>
+<option value="█▓▒░ ">Bloques</option>
+</select>
+
+<button onclick="invertir()">🌗 Invertir</button>
+<button onclick="copiar()">📋 Copiar</button>
+<button onclick="descargar()">📥 Descargar</button>
+</div>
+
+<div class="panel preview">
+<h3>Vista previa</h3>
+<img id="preview">
+</div>
+
+<div class="panel">
+<h3>📷 Cámara en vivo</h3>
+<video id="video" autoplay playsinline></video>
+<button onclick="iniciarCamara()">Activar cámara</button>
+</div>
+
+<div class="panel">
+<h3>Resultado ASCII</h3>
+<div id="resultado"></div>
+</div>
+
+<canvas id="canvas" style="display:none;"></canvas>
+
+</div>
+
+<script>
+const input = document.getElementById("imagenInput");
+const slider = document.getElementById("calidad");
+const valor = document.getElementById("valorCalidad");
+const estilo = document.getElementById("estilo");
+const brilloControl = document.getElementById("brillo");
+const modoColor = document.getElementById("modoColor");
+const zoom = document.getElementById("zoom");
+const video = document.getElementById("video");
+
+let invertido = false;
+
+// eventos
+slider.oninput = () => {
+  valor.textContent = slider.value;
+  convertir();
+};
+
+input.onchange = convertir;
+estilo.onchange = convertir;
+brilloControl.oninput = convertir;
+modoColor.onchange = convertir;
+
+zoom.oninput = () => {
+  const size = zoom.value + "px";
+  const res = document.getElementById("resultado");
+  res.style.fontSize = size;
+  res.style.lineHeight = size;
+};
+
+// convertir imagen con validaciones
+function convertir() {
+  const file = input.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("⚠️ La imagen es demasiado pesada (máx 5MB)");
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    alert("⚠️ Archivo no válido");
+    return;
+  }
+
+  const img = new Image();
+  const reader = new FileReader();
+
+  reader.onload = e => {
+    img.src = e.target.result;
+    document.getElementById("preview").src = e.target.result;
+  };
+
+  img.onload = () => {
+    if (img.width > 2000 || img.height > 2000) {
+      alert("⚠️ Imagen muy grande, puede ir lenta");
+    }
+
+    document.getElementById("resultado").innerHTML = "⏳ Procesando imagen...";
+    procesarImagen(img);
+  };
+
+  reader.readAsDataURL(file);
+}
+
+function procesarImagen(img) {
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  const width = slider.value;
+  const scale = width / img.width;
+
+  canvas.width = width;
+  canvas.height = img.height * scale;
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  generarASCII(data, canvas.width, canvas.height);
+}
+
+// cámara
+function iniciarCamara() {
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(stream => {
+      video.srcObject = stream;
+      procesarVideo();
+    })
+    .catch(() => alert("No se pudo usar la cámara"));
+}
+
+function procesarVideo() {
+  const canvas = document.getElementById("canvas");
+  const ctx = canvas.getContext("2d");
+
+  function loop() {
+    canvas.width = 120;
+    canvas.height = 90;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+
+    generarASCII(data, canvas.width, canvas.height);
+    requestAnimationFrame(loop);
+  }
+
+  loop();
+}
+
+// generar ASCII
+function generarASCII(data, width, height) {
+  const chars = estilo.value;
+  let ascii = "";
+
+  const salto = 2;
+
+  for (let y = 0; y < height; y += salto) {
+    for (let x = 0; x < width; x += salto) {
+
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      let brightness = ((r + g + b) / 3) * brilloControl.value;
+
+      if (invertido) brightness = 255 - brightness;
+
+      const index = Math.floor((brightness / 255) * (chars.length - 1));
+      const char = chars[index];
+
+      if (modoColor.value === "color") {
+        ascii += `<span style="color: rgb(${r},${g},${b})">${char}</span>`;
+      } else {
+        const gris = (r + g + b) / 3;
+        ascii += `<span style="color: rgb(${gris},${gris},${gris})">${char}</span>`;
+      }
+    }
+    ascii += "<br>";
+  }
+
+  document.getElementById("resultado").innerHTML = ascii;
+}
+
+// utilidades
+function copiar() {
+  navigator.clipboard.writeText(document.getElementById("resultado").innerText);
+  alert("Copiado!");
+}
+
+function descargar() {
+  const texto = document.getElementById("resultado").innerText;
+  const blob = new Blob([texto], { type: "text/plain" });
+  const link = document.createElement("a");
+
+  link.href = URL.createObjectURL(blob);
+  link.download = "ascii.txt";
+  link.click();
+}
+
+function invertir() {
+  invertido = !invertido;
+}
+</script>
+
+</body>
+</html>
